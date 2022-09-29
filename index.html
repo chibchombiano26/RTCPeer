@@ -15,67 +15,51 @@
       src="https://webrtc.github.io/samples/src/video/chrome.mp4"
     ></video>
     <video id="remote" controls autoplay muted></video>
+
     <script type="text/javascript">
       // add on load event for local video
-      const parent = new RTCPeerConnection();
-      const child = new RTCPeerConnection();
+      const parentVid = new RTCPeerConnection();
+      const childVid = new RTCPeerConnection();
 
-      const localVideo = document.getElementById("local");
-      localVideo.addEventListener("loadedmetadata", () => {
-        localVideo.play();
-        onLoadHandler();
-      });
+      window.onload = () => onLoadHandler();
 
-    //   const onLoadHandler = async () => {
-    //     const videoElement = document.getElementById("local");
-    //     const captureStream = videoElement.captureStream();
-    //     parent.addStream(captureStream);
-
-    //     const offer = await parent.createOffer();
-    //     await parent.setLocalDescription(new RTCSessionDescription(offer));
-
-    //     // child
-    //     debugger;
-    //     const answer = await child.createAnswer();
-    //     await parent.setRemoteDescription(child.localDescription);
-    //   };
-
-      parent.onicecandidate = (e) => {
+      parentVid.onicecandidate = (e) => {
         if (e.candidate) {
-          child.addIceCandidate(e.candidate);
+          childVid.addIceCandidate(e.candidate);
         }
       };
 
-      child.onicecandidate = (e) => {
+      childVid.onicecandidate = (e) => {
         if (e.candidate) {
-          parent.addIceCandidate(e.candidate);
+          parentVid.addIceCandidate(e.candidate);
         }
       };
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
       const onLoadHandler = async () => {
-      navigator.mediaDevices.getUserMedia({video: true, audio: true}).then((stream) => {
-          // document.getElementById('local').srcObject = stream;
-          parent.addStream(stream);
-          return parent.createOffer();
-      }).then((offer) => {
-          return parent.setLocalDescription(new RTCSessionDescription(offer));
-      }).then(() => {
-          return child.setRemoteDescription(parent.localDescription);
-      }).then(() => {
-          return child.createAnswer();
-      }).then((answer) => {
-          return child.setLocalDescription(answer);
-      }).then(() => {
-          return parent.setRemoteDescription(child.localDescription);
-      }).then(() => {
-          console.log("Success");
-      }).catch((e) => {
-          console.log(e);
-      });
-    }
+        const videoElement = document.getElementById("local");
+        const stream1 = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        const stream = videoElement.captureStream();
+        parentVid.addStream(stream);
 
-      child.onaddstream = (e) => {
-        document.getElementById("remote").srcObject = e.stream;
+        try {
+          const offer = await parentVid.createOffer();
+          await parentVid.setLocalDescription(new RTCSessionDescription(offer));
+          await childVid.setRemoteDescription(parentVid.localDescription);
+          const answer = await childVid.createAnswer();
+          await childVid.setLocalDescription(answer);
+          await parentVid.setRemoteDescription(childVid.localDescription);
+          console.log("Success");
+        } catch (e) {
+          console.log(e);
+        }
+      };
+
+      childVid.ontrack = (e) => {
+        document.getElementById("remote").srcObject = e.streams[0];
       };
     </script>
   </body>
