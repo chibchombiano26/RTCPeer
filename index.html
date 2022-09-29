@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <video
+      id="local"
+      controls
+      crossorigin="anonymous"
+      muted
+      src="https://webrtc.github.io/samples/src/video/chrome.mp4"
+    ></video>
+    <video id="remote" controls autoplay muted></video>
+    <script type="text/javascript">
+      // add on load event for local video
+      const parent = new RTCPeerConnection();
+      const child = new RTCPeerConnection();
+
+      const localVideo = document.getElementById("local");
+      localVideo.addEventListener("loadedmetadata", () => {
+        localVideo.play();
+        onLoadHandler();
+      });
+
+    //   const onLoadHandler = async () => {
+    //     const videoElement = document.getElementById("local");
+    //     const captureStream = videoElement.captureStream();
+    //     parent.addStream(captureStream);
+
+    //     const offer = await parent.createOffer();
+    //     await parent.setLocalDescription(new RTCSessionDescription(offer));
+
+    //     // child
+    //     debugger;
+    //     const answer = await child.createAnswer();
+    //     await parent.setRemoteDescription(child.localDescription);
+    //   };
+
+      parent.onicecandidate = (e) => {
+        if (e.candidate) {
+          child.addIceCandidate(e.candidate);
+        }
+      };
+
+      child.onicecandidate = (e) => {
+        if (e.candidate) {
+          parent.addIceCandidate(e.candidate);
+        }
+      };
+
+      const onLoadHandler = async () => {
+      navigator.mediaDevices.getUserMedia({video: true, audio: true}).then((stream) => {
+          // document.getElementById('local').srcObject = stream;
+          parent.addStream(stream);
+          return parent.createOffer();
+      }).then((offer) => {
+          return parent.setLocalDescription(new RTCSessionDescription(offer));
+      }).then(() => {
+          return child.setRemoteDescription(parent.localDescription);
+      }).then(() => {
+          return child.createAnswer();
+      }).then((answer) => {
+          return child.setLocalDescription(answer);
+      }).then(() => {
+          return parent.setRemoteDescription(child.localDescription);
+      }).then(() => {
+          console.log("Success");
+      }).catch((e) => {
+          console.log(e);
+      });
+    }
+
+      child.onaddstream = (e) => {
+        document.getElementById("remote").srcObject = e.stream;
+      };
+    </script>
+  </body>
+</html>
