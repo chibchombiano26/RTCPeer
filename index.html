@@ -14,24 +14,14 @@
       muted
       src="https://webrtc.github.io/samples/src/video/chrome.mp4"
     ></video>
-    <video id="remote" controls autoplay muted></video>
 
     <script type="text/javascript">
       // add on load event for local video
       const parentVid = new RTCPeerConnection();
-      const childVid = new RTCPeerConnection();
-
-      window.onload = () => onLoadHandler();
 
       parentVid.onicecandidate = (e) => {
         if (e.candidate) {
-          childVid.addIceCandidate(e.candidate);
-        }
-      };
-
-      childVid.onicecandidate = (e) => {
-        if (e.candidate) {
-          parentVid.addIceCandidate(e.candidate);
+          localStorage.setItem("child-candidate", JSON.stringify(e.candidate));
         }
       };
 
@@ -48,19 +38,28 @@
         try {
           const offer = await parentVid.createOffer();
           await parentVid.setLocalDescription(new RTCSessionDescription(offer));
-          await childVid.setRemoteDescription(parentVid.localDescription);
-          const answer = await childVid.createAnswer();
-          await childVid.setLocalDescription(answer);
-          await parentVid.setRemoteDescription(childVid.localDescription);
-          console.log("Success");
+          localStorage.setItem("offer", JSON.stringify(offer));
         } catch (e) {
           console.log(e);
         }
       };
 
-      childVid.ontrack = (e) => {
-        document.getElementById("remote").srcObject = e.streams[0];
-      };
+      // detect storage change
+      window.addEventListener("storage", (e) => {
+        if (e.key === "answer") {
+          const answer = JSON.parse(e.newValue);
+          parentVid.setRemoteDescription(new RTCSessionDescription(answer));
+          // parentVid.setRemoteDescription(childVid.localDescription);
+        } else if (e.key === "parent-candidate") {
+          const candidate = JSON.parse(e.newValue);
+          parentVid.addIceCandidate(candidate);
+        }
+      });
+    
+      window.onload = () => {
+        window.open("popup.html", "child", "width=500,height=300");
+        onLoadHandler()
+      }
     </script>
   </body>
 </html>
