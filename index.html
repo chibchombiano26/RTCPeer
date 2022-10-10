@@ -15,39 +15,79 @@
         muted
         src="https://webrtc.github.io/samples/src/video/chrome.mp4"
       ></video>
-      <video id="cloned" autoplay muted></video>
-    </div>
+   </div>
 
     <script type="text/javascript">
-      window.onload = () => {
-        localStorage.clear();
-        const videoElement = document.getElementById("local");
-        const stream = videoElement.captureStream();
 
-        let videoElem = document.createElement("video");
-        videoElem.autoplay = true;
-        videoElem.muted = true;
-        videoElem.controls = true;
+      // get current domain
+      const domain = window.location.origin;
 
-        const popUpWindow = window.open(
-          "popup.html",
-          "child",
-          "width=500,height=300"
-        );
-        setTimeout(() => {
-          if (!popUpWindow) {
-            return;
-          }
+      // add on load event for local video
+      const parentVid = new RTCPeerConnection();
 
-          const document = popUpWindow.document.getElementById(
-            "video-container"
-          );
-          if (document) {
-            document.appendChild(videoElem);
-            videoElem.srcObject = stream.clone();
-          }
-        }, 1000);
+      // dest html
+      const destinationHTML = `${domain}/*`;
+
+      // get iframe method
+      const getIframe = () => {
+        return document.getElementById("iframe");
       };
+      
+
+      window.addEventListener('message', event => {
+
+        if(!event.data) return;
+
+        const data = JSON.parse(event.data);
+        if(data.type === "answer") {
+          const answer = data.answer;
+          parentVid.setRemoteDescription(new RTCSessionDescription(answer))
+        }
+        if(data.type === "parent-candidate") {
+          const candidate = data.candidate;
+          parentVid.addIceCandidate(candidate)
+        }
+      })
+
+      parentVid.onicecandidate = (e) => {
+        if (e.candidate) {
+          const iframe = getIframe()
+          iframe.contentWindow.postMessage(JSON.stringify({
+            type: "child-candidate",
+            candidate: e.candidate
+          }), destinationHTML)
+        }
+      };
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      const onLoadHandler = async () => {
+        const videoElement = document.getElementById("local");
+        const stream1 = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        const stream = videoElement.captureStream();
+        parentVid.addStream(stream);
+
+        try {
+          const offer = await parentVid.createOffer();
+          await parentVid.setLocalDescription(new RTCSessionDescription(offer));
+          iframe.contentWindow.postMessage(JSON.stringify({
+            type: "offer",
+            offer: offer
+          }), destinationHTML)
+        } catch (e) {
+          console.log(e);
+        }
+      };
+    
+      window.onload = () => {
+        window.open("popup.html", "child", "width=500,height=300");
+        onLoadHandler()
+      }
     </script>
   </body>
+  <div>
+    <iframe id="iframe" src="destination.html" width="500" height="500"></iframe>
+  </div>
 </html>

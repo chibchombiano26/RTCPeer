@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <video id="remote" autoplay muted></video>
+    <script>
+      debugger
+      // get current domain
+      const domain = window.location.origin;
+
+      // RTC Peer Connection
+      const child = new RTCPeerConnection();
+
+      const destinationHTML = `${domain}/*`;
+
+      // listen for message from parent
+      window.addEventListener('message', event => {
+
+        if(!event.data) return;
+
+        const data = JSON.parse(event.data);
+        if(data.type === "child-candidate") {
+          const candidate = data.candidate;
+          child.addIceCandidate(candidate)
+        }
+        if(data.type === "offer") {
+          const offer = data.offer;
+          createAnswer(offer)
+        }
+      })
+
+      child.onicecandidate = (e) => {
+        if (e.candidate) {
+          window.parent.postMessage(JSON.stringify({
+            type: "parent-candidate",
+            candidate: e.candidate
+          }), destinationHTML)
+        }
+      };
+
+      const createAnswer = async (offer) => {
+        await child.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await child.createAnswer();
+        await child.setLocalDescription(answer);
+
+        window.parent.postMessage(JSON.stringify({
+          type: "answer",
+          answer: answer
+        }), destinationHTML)
+      };
+
+
+      child.onaddstream = (e) => {
+        document.getElementById("remote").srcObject = e.stream;
+      };
+    </script>
+    <div>
+      <span>Iframe</span>
+    </div>
+  </body>
+</html>
