@@ -19,6 +19,8 @@
 
     <script type="text/javascript">
 
+      const channel = new BroadcastChannel('message');
+
       // get current domain
       const domain = window.location.origin;
 
@@ -34,7 +36,7 @@
       };
       
 
-      window.addEventListener('message', event => {
+      channel.addEventListener('message', event => {
 
         if(!event.data) return;
 
@@ -52,7 +54,7 @@
       parentVid.onicecandidate = (e) => {
         if (e.candidate) {
           const iframe = getIframe()
-          iframe.contentWindow.postMessage(JSON.stringify({
+          channel.postMessage(JSON.stringify({
             type: "child-candidate",
             candidate: e.candidate
           }), destinationHTML)
@@ -72,7 +74,7 @@
         try {
           const offer = await parentVid.createOffer();
           await parentVid.setLocalDescription(new RTCSessionDescription(offer));
-          iframe.contentWindow.postMessage(JSON.stringify({
+          channel.postMessage(JSON.stringify({
             type: "offer",
             offer: offer
           }), destinationHTML)
@@ -87,7 +89,7 @@
       }
     </script>
   </body>
-  <div>
+  <!-- <div>
     <iframe id="iframe" src="destination.html" width="500" height="500"></iframe>
-  </div>
+  </div> -->
 </html>

@@ -7,20 +7,6 @@
     <title>Document</title>
 </head>
 <body>
-    <iframe id="destination" src="destination.html"></iframe>
-
-    <script>
-
-        // get iframe method
-        const getIframe = () => {
-            return document.getElementById("destination");
-        };
-
-        window.addEventListener('message', event => {
-            window.opener.postMessage(event.data, '*')
-            getIframe().contentWindow.postMessage(event.data, '*')
-        })
-    </script>
-
+    <iframe id="destination" src="destination.html" style="width: 500px; height: 500px;" ></iframe>
 </body>
 </html>

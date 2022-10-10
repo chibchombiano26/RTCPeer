@@ -13,13 +13,15 @@
       // get current domain
       const domain = window.location.origin;
 
+      const channel = new BroadcastChannel('message');
+
       // RTC Peer Connection
       const child = new RTCPeerConnection();
 
       const destinationHTML = `${domain}/*`;
 
       // listen for message from parent
-      window.addEventListener('message', event => {
+      channel.addEventListener('message', event => {
 
         if(!event.data) return;
 
@@ -36,7 +38,7 @@
 
       child.onicecandidate = (e) => {
         if (e.candidate) {
-          window.parent.postMessage(JSON.stringify({
+          channel.postMessage(JSON.stringify({
             type: "parent-candidate",
             candidate: e.candidate
           }), destinationHTML)
@@ -48,7 +50,7 @@
         const answer = await child.createAnswer();
         await child.setLocalDescription(answer);
 
-        window.parent.postMessage(JSON.stringify({
+        channel.postMessage(JSON.stringify({
           type: "answer",
           answer: answer
         }), destinationHTML)
