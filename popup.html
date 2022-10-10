@@ -7,41 +7,6 @@
     <title>Document</title>
   </head>
   <body>
-    <video id="remote" autoplay muted></video>
-    <script>
-      localStorage.clear();
-      const child = new RTCPeerConnection();
-
-      child.onicecandidate = (e) => {
-        if (e.candidate) {
-          localStorage.setItem("parent-candidate", JSON.stringify(e.candidate));
-        }
-      };
-
-      const createAnswer = async () => {
-        const offer = JSON.parse(localStorage.getItem("offer"));
-        await child.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await child.createAnswer();
-        await child.setLocalDescription(answer);
-
-        localStorage.setItem("answer", JSON.stringify(answer));
-      };
-
-
-      child.onaddstream = (e) => {
-        document.getElementById("remote").srcObject = e.stream;
-      };
-
-      // detect storage change
-      window.addEventListener("storage", (e) => {
-        if (e.key === "offer") {
-            createAnswer();
-        }
-        else if(e.key === "child-candidate") {
-          const candidate = JSON.parse(e.newValue);
-          child.addIceCandidate(candidate);
-        }
-      });
-    </script>
+    <div id="video-container"></div>
   </body>
 </html>

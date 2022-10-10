@@ -7,59 +7,47 @@
     <title>Document</title>
   </head>
   <body>
-    <video
-      id="local"
-      controls
-      crossorigin="anonymous"
-      muted
-      src="https://webrtc.github.io/samples/src/video/chrome.mp4"
-    ></video>
+    <div>
+      <video
+        id="local"
+        controls
+        crossorigin="anonymous"
+        muted
+        src="https://webrtc.github.io/samples/src/video/chrome.mp4"
+      ></video>
+      <video id="cloned" autoplay muted></video>
+    </div>
 
     <script type="text/javascript">
-      // add on load event for local video
-      const parentVid = new RTCPeerConnection();
-
-      parentVid.onicecandidate = (e) => {
-        if (e.candidate) {
-          localStorage.setItem("child-candidate", JSON.stringify(e.candidate));
-        }
-      };
-
-      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-      const onLoadHandler = async () => {
-        const videoElement = document.getElementById("local");
-        const stream1 = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-        const stream = videoElement.captureStream();
-        parentVid.addStream(stream);
-
-        try {
-          const offer = await parentVid.createOffer();
-          await parentVid.setLocalDescription(new RTCSessionDescription(offer));
-          localStorage.setItem("offer", JSON.stringify(offer));
-        } catch (e) {
-          console.log(e);
-        }
-      };
-
-      // detect storage change
-      window.addEventListener("storage", (e) => {
-        if (e.key === "answer") {
-          const answer = JSON.parse(e.newValue);
-          parentVid.setRemoteDescription(new RTCSessionDescription(answer));
-          // parentVid.setRemoteDescription(childVid.localDescription);
-        } else if (e.key === "parent-candidate") {
-          const candidate = JSON.parse(e.newValue);
-          parentVid.addIceCandidate(candidate);
-        }
-      });
-    
       window.onload = () => {
-        window.open("popup.html", "child", "width=500,height=300");
-        onLoadHandler()
-      }
+        localStorage.clear();
+        const videoElement = document.getElementById("local");
+        const stream = videoElement.captureStream();
+
+        let videoElem = document.createElement("video");
+        videoElem.autoplay = true;
+        videoElem.muted = true;
+        videoElem.controls = true;
+
+        const popUpWindow = window.open(
+          "popup.html",
+          "child",
+          "width=500,height=300"
+        );
+        setTimeout(() => {
+          if (!popUpWindow) {
+            return;
+          }
+
+          const document = popUpWindow.document.getElementById(
+            "video-container"
+          );
+          if (document) {
+            document.appendChild(videoElem);
+            videoElem.srcObject = stream.clone();
+          }
+        }, 1000);
+      };
     </script>
   </body>
 </html>
